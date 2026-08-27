@@ -27,11 +27,86 @@ namespace UZIP2
 	public partial class MainWindow : Window
 	{
 		DebugWindow DBWin = null;
+		System.Windows.Forms.NotifyIcon trayIcon = null;
+
 		public MainWindow()
 		{
 			InitializeComponent();
 			WindowPosition();
 			ControlInitialize();
+			InitTrayIcon();
+			this.Closed += MainWindow_Closed;
+		}
+
+		private void InitTrayIcon()
+		{
+			trayIcon = new System.Windows.Forms.NotifyIcon();
+			trayIcon.Text = "UZip";
+			trayIcon.Icon = LoadAppIcon();
+			trayIcon.Visible = false;
+			trayIcon.DoubleClick += (s, e) => RestoreFromTray();
+			trayIcon.MouseClick += (s, e) =>
+			{
+				if (e.Button == System.Windows.Forms.MouseButtons.Left)
+					RestoreFromTray();
+			};
+
+			var menu = new System.Windows.Forms.ContextMenuStrip();
+			menu.Items.Add("显示", null, (s, e) => RestoreFromTray());
+			menu.Items.Add("退出", null, (s, e) => Dispatcher.BeginInvoke(new Action(ExitApp)));
+			trayIcon.ContextMenuStrip = menu;
+		}
+
+		private static System.Drawing.Icon LoadAppIcon()
+		{
+			try
+			{
+				string path = System.Reflection.Assembly.GetExecutingAssembly().Location;
+				var ico = System.Drawing.Icon.ExtractAssociatedIcon(path);
+				if (ico != null) return ico;
+			}
+			catch { }
+			var streamInfo = Application.GetResourceStream(new Uri("pack://application:,,,/UZIP.ico"));
+			return new System.Drawing.Icon(streamInfo.Stream);
+		}
+
+		private void MinimizeToTray()
+		{
+			if (trayIcon == null) InitTrayIcon();
+			trayIcon.Visible = true;
+			this.Hide();
+		}
+
+		private void RestoreFromTray()
+		{
+			Dispatcher.BeginInvoke(new Action(() =>
+			{
+				this.Show();
+				this.WindowState = WindowState.Normal;
+				this.Activate();
+				if (trayIcon != null) trayIcon.Visible = false;
+			}));
+		}
+
+		private void ExitApp()
+		{
+			USetting.WindowLeft = this.Left;
+			USetting.WindowTop = this.Top;
+			DisposeTrayIcon();
+			Environment.Exit(0);
+		}
+
+		private void DisposeTrayIcon()
+		{
+			if (trayIcon == null) return;
+			trayIcon.Visible = false;
+			trayIcon.Dispose();
+			trayIcon = null;
+		}
+
+		private void MainWindow_Closed(object sender, EventArgs e)
+		{
+			DisposeTrayIcon();
 		}
 
 		// 窗体初始化Plus
@@ -248,15 +323,13 @@ namespace UZIP2
 		{
 			if (USetting.RunState == RunStatus.Normal)
 			{
-				USetting.WindowLeft = this.Left;
-				USetting.WindowTop = this.Top;
-				Environment.Exit(0);
+				ExitApp();
 			}
 		}
 		private void WMain_BClose_MouseEnter(object sender, MouseEventArgs e)
 		{
 			BClose.Foreground = Brushes.Red;
-			if (USetting.RunState == RunStatus.Normal) TipShow("「左击」关闭UZip应用\n「右击」最小化程序");
+			if (USetting.RunState == RunStatus.Normal) TipShow("「左击」关闭UZip应用\n「右击」最小化到托盘");
 			if (USetting.RunState == RunStatus.EditSetting) TipShow("请先关闭设置面板");
 			if (USetting.RunState == RunStatus.EditPassword) TipShow("请先关闭密码管理面板");
 		}
@@ -264,6 +337,57 @@ namespace UZIP2
 		{
 			BClose.Foreground = Brushes.Black;
 			TipShowEnd();
+		}
+
+		private void BMinimize_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			if (USetting.RunState == RunStatus.Normal)
+			{
+				MinimizeToTray();
+			}
+		}
+		private void BMinimize_MouseEnter(object sender, MouseEventArgs e)
+		{
+			BMinimize.Foreground = Brushes.DodgerBlue;
+			if (USetting.RunState == RunStatus.Normal) TipShow("最小化到系统托盘（右下角）\n单击托盘图标可恢复");
+			if (USetting.RunState == RunStatus.EditSetting) TipShow("请先关闭设置面板");
+			if (USetting.RunState == RunStatus.EditPassword) TipShow("请先关闭密码管理面板");
+		}
+		private void BMinimize_MouseLeave(object sender, MouseEventArgs e)
+		{
+			BMinimize.Foreground = Brushes.Black;
+			TipShowEnd();
+		}
+
+		private void BSnapCorner_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+		{
+			if (USetting.RunState == RunStatus.EditSetting || USetting.RunState == RunStatus.EditPassword)
+				return;
+			SnapToBottomRight();
+		}
+		private void BSnapCorner_MouseEnter(object sender, MouseEventArgs e)
+		{
+			BSnapCorner.Foreground = Brushes.DodgerBlue;
+			if (USetting.RunState == RunStatus.EditSetting) TipShow("请先关闭设置面板");
+			else if (USetting.RunState == RunStatus.EditPassword) TipShow("请先关闭密码管理面板");
+			else TipShow("吸附到屏幕右下角\n避开任务栏");
+		}
+		private void BSnapCorner_MouseLeave(object sender, MouseEventArgs e)
+		{
+			BSnapCorner.Foreground = Brushes.Black;
+			TipShowEnd();
+		}
+
+		// ponytail: 按可见面板吸附，避免透明窗体 Width=520 导致偏左
+		private void SnapToBottomRight()
+		{
+			var wa = SystemParameters.WorkArea;
+			double visW = (UBoard.ActualWidth > 0 ? UBoard.ActualWidth : 250) + 20;
+			double visH = (UBoard.ActualHeight > 0 ? UBoard.ActualHeight : 250) + 20;
+			this.Left = wa.Right - visW;
+			this.Top = wa.Bottom - visH;
+			USetting.WindowLeft = this.Left;
+			USetting.WindowTop = this.Top;
 		}
 
 		// 软件主菜单
@@ -2448,15 +2572,12 @@ namespace UZIP2
 
 		private void BClose_MouseRightButtonDown(object sender, MouseButtonEventArgs e)
 		{
-			Thread.Sleep(200);
-			this.WindowState = WindowState.Minimized;
 			if (USetting.RunState == RunStatus.Normal)
 			{
 				TipWarnToNormal();
 				TipShowEnd();
+				MinimizeToTray();
 			}
-			
-
 		}
 
 		private void BTip_MouseEnter(object sender, MouseEventArgs e)

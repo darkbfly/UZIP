@@ -43,6 +43,8 @@
                 <Button x:Name="BMenuCollection" Content="密码收集器" Style="{StaticResource MButton_F2}" HorizontalAlignment="Left" Height="35" Margin="21,156,0,0" VerticalAlignment="Top" Width="208" FontSize="14" BorderBrush="{x:Null}" Click="BMenuCollection_Click" Grid.ColumnSpan="2" MouseEnter="BMenuCollection_MouseEnter" MouseLeave="BMenuCollection_MouseLeave"/>
             </Grid>
             <Label x:Name="UTitle" Content="UZip" HorizontalAlignment="Left" Height="28" VerticalAlignment="Top" Width="48.882" FontSize="14" VerticalContentAlignment="Center" FontWeight="Bold" Margin="7,3.289,0,0" MouseLeftButtonDown="UTitle_MouseLeftButtonDown" MouseEnter="UTitle_MouseEnter" MouseLeave="UTitle_MouseLeave"/>
+            <Label x:Name="BSnapCorner" Content="↘" Margin="171,3.834,54,221.166" HorizontalAlignment="Center" VerticalAlignment="Center" Width="25" Height="25" FontSize="14" FontWeight="Bold" MouseEnter="BSnapCorner_MouseEnter" MouseLeave="BSnapCorner_MouseLeave" MouseLeftButtonDown="BSnapCorner_MouseLeftButtonDown"/>
+            <Label x:Name="BMinimize" Content="━" Margin="196,3.834,29,221.166" HorizontalAlignment="Center" VerticalAlignment="Center" Width="25" Height="25" FontSize="14" FontWeight="Bold" MouseEnter="BMinimize_MouseEnter" MouseLeave="BMinimize_MouseLeave" MouseLeftButtonDown="BMinimize_MouseLeftButtonDown"/>
             <Label x:Name="BClose" Content="✖" Margin="221.17,3.834,3.83,221.166" HorizontalAlignment="Center" VerticalAlignment="Center" Width="25" Height="25" MouseEnter="WMain_BClose_MouseEnter" MouseLeave="WMain_BClose_MouseLeave" MouseLeftButtonDown="WMain_BClose_MouseLeftButtonDown" MouseRightButtonDown="BClose_MouseRightButtonDown"/>
 
 
