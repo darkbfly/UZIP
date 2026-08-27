@@ -461,30 +461,16 @@ namespace UZIP2
 				str = GetClipboardHelp();
 				if (str == null) return;
 				str = USetting.PWPaper.AddPassword(str);
-				if (str != null)
-				{
-					BPasswordPatse.Content = "密码纸(" + USetting.PWPaper.Count + ")";
-					TipShow(str + "\n已写入密码纸",TipMods.WarmGray);
-				}
-				else
-				{
-					TipShow("密码纸已经满了，写不下更多密码了！", TipMods.WarnRed);
-				}
+				BPasswordPatse.Content = "密码纸(" + USetting.PWPaper.Count + ")";
+				TipShow(str + "\n已写入密码纸",TipMods.WarmGray);
 			}
 			if (USetting.RunState == RunStatus.MiniMode)
 			{
 				str = GetClipboardHelp();
 				if (str == null) return;
 				str = USetting.PWPaper.AddPassword(str);
-				if (str != null)
-				{
-					BMiniPatse.Content = USetting.PWPaper.Count.ToString();
-					BMiniPatse.ToolTip = "左击贴入密码，右击显示菜单\n最后贴入的密码：\n" + USetting.PWPaper.GetLastPassword();
-				}
-				else
-				{
-					BMiniPatse.Foreground = Brushes.Red;
-				}
+				BMiniPatse.Content = USetting.PWPaper.Count.ToString();
+				BMiniPatse.ToolTip = "左击贴入密码，右击显示菜单\n最后贴入的密码：\n" + USetting.PWPaper.GetLastPassword();
 			}
 			// 密码纸贴入标识开启，下次解压/压缩时会保存密码。
 			USetting.PaperChange = true;
@@ -1413,12 +1399,12 @@ namespace UZIP2
 
 		private void BPWNoteEditText_MouseEnter(object sender, MouseEventArgs e)
 		{
-			TipShow("常用密码，上限200个\n储存的密码不会被删除");
+			TipShow("常用密码\n储存的密码不会被删除");
 		}
 
 		private void BPWPageEditText_MouseEnter(object sender, MouseEventArgs e)
 		{
-			TipShow("一次性密码，上限200个\n密码被解压使用后会将删除");
+			TipShow("一次性密码\n密码被解压使用后会将删除");
 		}
 
 		private void BPWRecycleEditText_MouseEnter(object sender, MouseEventArgs e)

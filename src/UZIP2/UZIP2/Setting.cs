@@ -451,8 +451,6 @@ namespace UZIP2
 	}
 	public class Password
 	{
-		// 密码上限
-		public const int PWMAX = 200;
 		// 密码数据
 		public List<string> Passwords = new List<string>();
 		// 密码字段名
@@ -472,14 +470,13 @@ namespace UZIP2
 		// 载入所有密码数据
 		public void LoadPasswords()
 		{
-			string p = null;
-			for (int i = 0; i < PWMAX; i++)
+			// ponytail: 无上限；config 以空值结尾，按序读到断点为止
+			for (int i = 0; ; i++)
 			{
-				p = PWConfig.GetConfig(PasswordName + i, null);
-				if (p == null||p=="") break;
+				string p = PWConfig.GetConfig(PasswordName + i, null);
+				if (p == null || p == "") break;
 				Passwords.Add(p);
 			}
-
 		}
 		// 储存所有密码
 		public void SavePasswords()
@@ -494,18 +491,14 @@ namespace UZIP2
 			PWConfig.SetConfig(PasswordName + i, null);
 		}
 
-		// 添加一个密码，并写入配置。容量超过返回Null 否则返回字符串
+		// 添加一个密码，并写入配置
 		public string AddPassword(string pw)
 		{
-			if (Count >= PWMAX) return null;
-			else
-			{
-				Passwords.Add(pw);
-				PWConfig.SetConfig(PasswordName + (Count - 1), pw);
-				// 重新添加结尾标记
-				PWConfig.SetConfig(PasswordName + (Count), null);
-				return pw;
-			}
+			Passwords.Add(pw);
+			PWConfig.SetConfig(PasswordName + (Count - 1), pw);
+			// 重新添加结尾标记
+			PWConfig.SetConfig(PasswordName + (Count), null);
+			return pw;
 		}
 
 		// 删除一个密码，并保存所有密码,返回删除的密码，以便放入临时回收站，
@@ -533,14 +526,13 @@ namespace UZIP2
 			return deletepw;
 		}
 
-		// 添加若干密码,超过上限则忽略
+		// 添加若干密码
 		public bool AddPassword(List<string> li)
 		{
 			if (li == null) return false;
-			if (Count + li.Count() >= PWMAX) return false;
 			foreach (string l in li)
 			{
-				if(Count<PWMAX) Passwords.Add(l);
+				Passwords.Add(l);
 			}
 			SavePasswords();
 			return true;
