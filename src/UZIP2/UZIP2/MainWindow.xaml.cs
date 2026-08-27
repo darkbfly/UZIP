@@ -154,6 +154,8 @@ namespace UZIP2
 			BUseHotKey.IsChecked = USetting.UseHotKey;
 			//热键
 			BWindowOnTop.IsChecked = USetting.WindowOnTop;
+			BAutoStart.IsChecked = USetting.AutoStart;
+			USetting.ApplyAutoStart(USetting.AutoStart);
 			BDebugMode.Visibility = USetting.ShowDebug ? Visibility.Visible : Visibility.Hidden;
 			BDebugMode.IsChecked = USetting.DebugMode;
 			BExtractUnknow.IsChecked = USetting.ExtractUnknow;
@@ -1005,6 +1007,16 @@ namespace UZIP2
 			TipShow("UZip始终置其他窗口之上");
 		}
 
+		private void BAutoStart_Click(object sender, RoutedEventArgs e)
+		{
+			USetting.AutoStart = (bool)BAutoStart.IsChecked;
+			USetting.ApplyAutoStart(USetting.AutoStart);
+		}
+		private void BAutoStart_MouseEnter(object sender, MouseEventArgs e)
+		{
+			TipShow("开机自动启动UZip\n写入当前用户启动项");
+		}
+
 		private void BDebugMode_Click(object sender, RoutedEventArgs e)
 		{
 			USetting.DebugMode = (bool)BDebugMode.IsChecked;
@@ -1524,6 +1536,55 @@ namespace UZIP2
 		private void BPWNoteEditText_MouseEnter(object sender, MouseEventArgs e)
 		{
 			TipShow("常用密码\n储存的密码不会被删除");
+		}
+
+		private void BPWNoteImport_Click(object sender, RoutedEventArgs e)
+		{
+			var dlg = new Microsoft.Win32.OpenFileDialog();
+			dlg.Title = "导入密码本";
+			dlg.Filter = "文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*";
+			if (dlg.ShowDialog() != true) return;
+			try
+			{
+				string text = File.ReadAllText(dlg.FileName, Encoding.UTF8);
+				var list = Password.StringToList(text);
+				int n = list == null ? 0 : list.Count;
+				BPWNoteEditText.Text = list == null ? "" : Password.ListToString(list);
+				TipShow("已导入 " + n + " 条密码\n需点「确定」才会保存");
+			}
+			catch
+			{
+				TipShow("导入失败，请检查文件", TipMods.WarnRed);
+			}
+		}
+		private void BPWNoteImport_MouseEnter(object sender, MouseEventArgs e)
+		{
+			TipShow("从文本文件导入密码本\n每行一个密码，导入后需点确定保存");
+		}
+
+		private void BPWNoteExport_Click(object sender, RoutedEventArgs e)
+		{
+			var dlg = new Microsoft.Win32.SaveFileDialog();
+			dlg.Title = "导出密码本";
+			dlg.Filter = "文本文件 (*.txt)|*.txt|所有文件 (*.*)|*.*";
+			dlg.FileName = "UZip-PasswordNote.txt";
+			if (dlg.ShowDialog() != true) return;
+			try
+			{
+				string text = BPWNoteEditText.Text ?? "";
+				File.WriteAllText(dlg.FileName, text.Replace("\r\n", "\n").Replace("\n", "\r\n"), Encoding.UTF8);
+				var list = Password.StringToList(text);
+				int n = list == null ? 0 : list.Count;
+				TipShow("已导出 " + n + " 条密码");
+			}
+			catch
+			{
+				TipShow("导出失败", TipMods.WarnRed);
+			}
+		}
+		private void BPWNoteExport_MouseEnter(object sender, MouseEventArgs e)
+		{
+			TipShow("把当前编辑区密码导出为文本\n每行一个密码");
 		}
 
 		private void BPWPageEditText_MouseEnter(object sender, MouseEventArgs e)

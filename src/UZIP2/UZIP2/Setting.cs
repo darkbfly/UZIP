@@ -2,9 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
+using Microsoft.Win32;
 
 namespace UZIP2
 {
@@ -88,6 +90,37 @@ namespace UZIP2
 		{
 			get { return SConvert.ToBool(UConfig.GetConfig("WindowOnTop"), true); }
 			set { UConfig.SetConfig("WindowOnTop", value.ToString()); }
+		}
+		// 开机自动启动（HKCU Run）
+		public static bool AutoStart
+		{
+			get { return SConvert.ToBool(UConfig.GetConfig("AutoStart"), false); }
+			set { UConfig.SetConfig("AutoStart", value.ToString()); }
+		}
+
+		const string AutoStartRunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
+		const string AutoStartRunName = "UZip2";
+
+		// ponytail: 用当前 exe 路径写注册表；换位置后需重新勾选一次
+		public static void ApplyAutoStart(bool enable)
+		{
+			try
+			{
+				using (RegistryKey key = Registry.CurrentUser.OpenSubKey(AutoStartRunKey, true))
+				{
+					if (key == null) return;
+					if (enable)
+					{
+						string exe = Assembly.GetExecutingAssembly().Location;
+						key.SetValue(AutoStartRunName, "\"" + exe + "\"");
+					}
+					else
+					{
+						key.DeleteValue(AutoStartRunName, false);
+					}
+				}
+			}
+			catch { }
 		}
 		// 贴入密码时去除空格
 		public static bool TrimSpace

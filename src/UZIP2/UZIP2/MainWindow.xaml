@@ -55,7 +55,7 @@
                 <TabItem x:Name="BTabMain" Header="主程序" Width="75" Height="20" HorizontalAlignment="Center" Foreground="Gray" BorderBrush="LightGray" FontSize="14">
                     <Grid Background="White">
                         <ScrollViewer Template="{StaticResource MyScrollViewer}" Grid.Column="0" Margin="0" HorizontalAlignment="Left" Height="203" VerticalAlignment="Top" Width="224" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Orientation="Vertical" ScrollViewer.VerticalScrollBarVisibility="Visible" Width="224" Height="200" >
+                            <StackPanel Orientation="Vertical" ScrollViewer.VerticalScrollBarVisibility="Visible" Width="224" Height="230" >
                                 <Grid >
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="33*"/>
@@ -68,7 +68,8 @@
                                     <Button x:Name="BSetHotKey" Content="设置热键" Style="{StaticResource MButton_F}" HorizontalAlignment="Left" Height="24" Margin="7,100,0,0" VerticalAlignment="Top" Width="208" Click="BSetHotKey_Click" FontSize="12" MouseEnter="BSetHotKey_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2"/>
                                     <CheckBox x:Name="BResultWindow" Content="使用独立窗口显示结果" HorizontalAlignment="Left" Height="16" Margin="6.5,132,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BResultWindow_Click" MouseLeave="B_MouseLeave" MouseEnter="BResultWindow_MouseEnter" Grid.ColumnSpan="2"/>
                                     <CheckBox x:Name="BWindowOnTop" Content="窗口始终置顶" HorizontalAlignment="Left" Height="16" Margin="6.5,156,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BWindowOnTop_Click" MouseEnter="BWindowOnTop_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2"/>
-                                    <CheckBox x:Name="BDebugMode" Content="Debug模式" HorizontalAlignment="Left" Height="16" Margin="6.5,180,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BDebugMode_Click" MouseLeave="B_MouseLeave" MouseEnter="BDebugMode_MouseEnter" Grid.ColumnSpan="2"/>
+                                    <CheckBox x:Name="BAutoStart" Content="开机自动启动" HorizontalAlignment="Left" Height="16" Margin="6.5,180,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BAutoStart_Click" MouseEnter="BAutoStart_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2"/>
+                                    <CheckBox x:Name="BDebugMode" Content="Debug模式" HorizontalAlignment="Left" Height="16" Margin="6.5,204,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BDebugMode_Click" MouseLeave="B_MouseLeave" MouseEnter="BDebugMode_MouseEnter" Grid.ColumnSpan="2"/>
                                 </Grid>
                             </StackPanel>
 
@@ -246,7 +247,9 @@
             <TabControl HorizontalAlignment="Left" Height="195" Margin="9,9,0,0" VerticalAlignment="Top" Width="230" FontSize="14" >
                 <TabItem Header="密码本" Width="98" Height="20" HorizontalAlignment="Center" Foreground="Gray" BorderBrush="LightGray" MouseLeave="B_MouseLeave" MouseEnter="BPWNoteEditText_MouseEnter">
                     <Grid Background="White">
-                        <TextBox x:Name="BPWNoteEditText" HorizontalAlignment="Left" Height="171" Text="" VerticalAlignment="Top" Width="228" BorderBrush="White" Margin="-2" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" HorizontalScrollBarVisibility="Auto" MouseLeave="B_MouseLeave" MouseEnter="BPWNoteEditText_MouseEnter" FontSize="12"/>
+                        <TextBox x:Name="BPWNoteEditText" HorizontalAlignment="Left" Height="140" Text="" VerticalAlignment="Top" Width="228" BorderBrush="White" Margin="-2,0,0,0" VerticalScrollBarVisibility="Auto" AcceptsReturn="True" HorizontalScrollBarVisibility="Auto" MouseLeave="B_MouseLeave" MouseEnter="BPWNoteEditText_MouseEnter" FontSize="12"/>
+                        <Button x:Name="BPWNoteImport" Content="导入" Style="{StaticResource MButton_F}" HorizontalAlignment="Left" Height="24" Margin="4,144,0,0" VerticalAlignment="Top" Width="108" FontSize="12" Click="BPWNoteImport_Click" MouseEnter="BPWNoteImport_MouseEnter" MouseLeave="B_MouseLeave"/>
+                        <Button x:Name="BPWNoteExport" Content="导出" Style="{StaticResource MButton_F}" HorizontalAlignment="Left" Height="24" Margin="116,144,0,0" VerticalAlignment="Top" Width="108" FontSize="12" Click="BPWNoteExport_Click" MouseEnter="BPWNoteExport_MouseEnter" MouseLeave="B_MouseLeave"/>
                     </Grid>
                 </TabItem>
                 <TabItem x:Name="BPWPTab" Header="密码纸" Width="98" Height="20" HorizontalAlignment="Center" Foreground="Gray" BorderBrush="LightGray" MouseLeave="B_MouseLeave" MouseEnter="BPWPageEditText_MouseEnter" FontSize="14" >
