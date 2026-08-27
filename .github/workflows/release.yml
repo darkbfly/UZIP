@@ -1,0 +1,102 @@
+# 编译 UZIP2 Release，打 zip，上传到 GitHub Release
+# 触发：推送 v* tag，或 Actions 页手动 Run workflow
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "版本号（无 v 前缀也可，如 1.0.0）"
+        required: true
+        default: "1.0.0"
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build Release
+        shell: pwsh
+        run: |
+          msbuild "src\UZIP2\UZIP2\UZIP2.csproj" `
+            /t:Rebuild `
+            /p:Configuration=Release `
+            /p:Platform=AnyCPU `
+            /v:m
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $v = "${{ inputs.version }}".Trim()
+            if (-not $v.StartsWith("v")) { $v = "v$v" }
+          } else {
+            $v = "${{ github.ref_name }}"
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "version=$v"
+
+      - name: Bundle 7-Zip (runtime)
+        shell: pwsh
+        run: |
+          # 应用默认找 <exe>\7-Zip\7z.exe；CI 用 choco 装一份打进包
+          choco install 7zip -y --no-progress
+          $src = "C:\Program Files\7-Zip"
+          if (-not (Test-Path "$src\7z.exe")) { throw "7z.exe not found after choco install" }
+          $dst = "package\7-Zip"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          Copy-Item "$src\7z.exe","$src\7z.dll","$src\7-zip.dll","$src\License.txt","$src\readme.txt" -Destination $dst -ErrorAction SilentlyContinue
+          # 至少保证 7z.exe
+          Copy-Item "$src\7z.exe" $dst -Force
+
+      - name: Pack zip
+        shell: pwsh
+        run: |
+          $out = "src\UZIP2\UZIP2\bin\Release"
+          if (-not (Test-Path "$out\UZIP2.exe")) { throw "UZIP2.exe missing" }
+          New-Item -ItemType Directory -Force -Path package | Out-Null
+          Copy-Item "$out\UZIP2.exe" package\ -Force
+          if (Test-Path "$out\UZIP2.exe.config") {
+            Copy-Item "$out\UZIP2.exe.config" package\ -Force
+          }
+          $zip = "UZIP2-${{ steps.ver.outputs.version }}-win.zip"
+          if (Test-Path $zip) { Remove-Item $zip -Force }
+          Compress-Archive -Path "package\*" -DestinationPath $zip -Force
+          "zip=$zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Get-Item $zip | Format-List Name, Length
+        id: pack
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: UZIP2-${{ steps.ver.outputs.version }}-win
+          path: UZIP2-${{ steps.ver.outputs.version }}-win.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.version }}
+          name: UZIP ${{ steps.ver.outputs.version }}
+          generate_release_notes: true
+          files: UZIP2-${{ steps.ver.outputs.version }}-win.zip
+          body: |
+            ## 下载
+            解压后直接运行 `UZIP2.exe`（已附带 `7-Zip\7z.exe`）。
+
+            ## 说明
+            - 配置目录：`Config\`（首次运行自动创建）
+            - 也可在设置中指定自定义 7z 路径
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
