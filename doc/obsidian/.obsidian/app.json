@@ -1,0 +1,11 @@
+{
+  "alwaysUpdateLinks": true,
+  "attachmentFolderPath": "attachments",
+  "newFileLocation": "folder",
+  "newFileFolderPath": "00-索引",
+  "promptDelete": false,
+  "showInlineTitle": true,
+  "showUnsupportedFiles": true,
+  "strictLineBreaks": false,
+  "useMarkdownLinks": false
+}

@@ -66,3 +66,8 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
+
+## Obsidian — 个人工作区布局不提交，配置和笔记保留
+doc/obsidian/.obsidian/workspace.json
+doc/obsidian/.obsidian/workspace-mobile.json
+doc/obsidian/.obsidian/cache
