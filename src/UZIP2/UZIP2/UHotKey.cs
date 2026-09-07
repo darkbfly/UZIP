@@ -47,11 +47,9 @@ namespace UZIP2
 			if (IsOK())
 			{
 				if (isRegister) Unregister();
-				
-				RegisterHotKey(Handle, ID, KMod, KKey);
-				isRegister = true;
+				// ponytail: 多开时第二实例注册失败则跳过，不抛错
+				isRegister = RegisterHotKey(Handle, ID, KMod, KKey);
 			}
-				
 		}
 		// 取消注册快捷键
 		public void Unregister()

@@ -55,7 +55,7 @@
                 <TabItem x:Name="BTabMain" Header="主程序" Width="75" Height="20" HorizontalAlignment="Center" Foreground="Gray" BorderBrush="LightGray" FontSize="14">
                     <Grid Background="White">
                         <ScrollViewer Template="{StaticResource MyScrollViewer}" Grid.Column="0" Margin="0" HorizontalAlignment="Left" Height="203" VerticalAlignment="Top" Width="224" VerticalScrollBarVisibility="Auto">
-                            <StackPanel Orientation="Vertical" ScrollViewer.VerticalScrollBarVisibility="Visible" Width="224" Height="230" >
+                            <StackPanel Orientation="Vertical" ScrollViewer.VerticalScrollBarVisibility="Visible" Width="224" Height="320" >
                                 <Grid >
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="33*"/>
@@ -69,7 +69,10 @@
                                     <CheckBox x:Name="BResultWindow" Content="使用独立窗口显示结果" HorizontalAlignment="Left" Height="16" Margin="6.5,132,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BResultWindow_Click" MouseLeave="B_MouseLeave" MouseEnter="BResultWindow_MouseEnter" Grid.ColumnSpan="2"/>
                                     <CheckBox x:Name="BWindowOnTop" Content="窗口始终置顶" HorizontalAlignment="Left" Height="16" Margin="6.5,156,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BWindowOnTop_Click" MouseEnter="BWindowOnTop_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2"/>
                                     <CheckBox x:Name="BAutoStart" Content="开机自动启动" HorizontalAlignment="Left" Height="16" Margin="6.5,180,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BAutoStart_Click" MouseEnter="BAutoStart_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2"/>
-                                    <CheckBox x:Name="BDebugMode" Content="Debug模式" HorizontalAlignment="Left" Height="16" Margin="6.5,204,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BDebugMode_Click" MouseLeave="B_MouseLeave" MouseEnter="BDebugMode_MouseEnter" Grid.ColumnSpan="2"/>
+                                    <CheckBox x:Name="BWatchFolder" Content="监听文件夹（仅解压）" HorizontalAlignment="Left" Height="16" Margin="6.5,204,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray" BorderBrush="Gray" Click="BWatchFolder_Click" MouseEnter="BWatchFolder_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2"/>
+                                    <TextBox x:Name="BWatchFolderPath" HorizontalAlignment="Left" Height="20" Margin="7.5,224,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="208" Foreground="Gray" BorderBrush="Gray" FontSize="12" VerticalContentAlignment="Center" MouseDoubleClick="BWatchFolderPath_MouseDoubleClick" MouseEnter="BWatchFolderPath_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2" LostFocus="BWatchFolderPath_LostFocus"/>
+                                    <TextBox x:Name="BWatchFolderOutPath" HorizontalAlignment="Left" Height="20" Margin="7.5,248,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="208" Foreground="Gray" BorderBrush="Gray" FontSize="12" VerticalContentAlignment="Center" MouseDoubleClick="BWatchFolderOutPath_MouseDoubleClick" MouseEnter="BWatchFolderOutPath_MouseEnter" MouseLeave="B_MouseLeave" Grid.ColumnSpan="2" LostFocus="BWatchFolderOutPath_LostFocus"/>
+                                    <CheckBox x:Name="BDebugMode" Content="Debug模式" HorizontalAlignment="Left" Height="16" Margin="6.5,274,0,0" VerticalAlignment="Top" Width="200" Foreground="Gray"  BorderBrush="Gray" Click="BDebugMode_Click" MouseLeave="B_MouseLeave" MouseEnter="BDebugMode_MouseEnter" Grid.ColumnSpan="2"/>
                                 </Grid>
                             </StackPanel>
 

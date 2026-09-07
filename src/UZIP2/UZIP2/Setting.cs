@@ -43,6 +43,8 @@ namespace UZIP2
 		public static Password PWNote = new Password("PWNote",UNoteConfig);
 		// 废纸篓，密码回收站，关闭软件清除
 		public static List<string> PWRecycle = new List<string>();
+		// CLI 本次任务输出目录覆盖（不写配置）；用完清空
+		public static string CliOverrideOutPath = null;
 		// 草稿纸，解压时贴入的密码
 		// public static List<string> PWTemp = new List<string>();
 
@@ -96,6 +98,23 @@ namespace UZIP2
 		{
 			get { return SConvert.ToBool(UConfig.GetConfig("AutoStart"), false); }
 			set { UConfig.SetConfig("AutoStart", value.ToString()); }
+		}
+
+		// 监听文件夹
+		public static bool WatchFolderEnabled
+		{
+			get { return SConvert.ToBool(UConfig.GetConfig("WatchFolderEnabled"), false); }
+			set { UConfig.SetConfig("WatchFolderEnabled", value.ToString()); }
+		}
+		public static string WatchFolderPath
+		{
+			get { return UConfig.GetConfig("WatchFolderPath", ""); }
+			set { UConfig.SetConfig("WatchFolderPath", value ?? ""); }
+		}
+		public static string WatchFolderOutPath
+		{
+			get { return UConfig.GetConfig("WatchFolderOutPath", ""); }
+			set { UConfig.SetConfig("WatchFolderOutPath", value ?? ""); }
 		}
 
 		const string AutoStartRunKey = @"Software\Microsoft\Windows\CurrentVersion\Run";
@@ -531,6 +550,14 @@ namespace UZIP2
 			PWConfig.SetConfig(PasswordName + (Count - 1), pw);
 			// 重新添加结尾标记
 			PWConfig.SetConfig(PasswordName + (Count), null);
+			return pw;
+		}
+
+		// CLI 会话密码：只进内存，不写配置
+		public string AddPasswordSession(string pw)
+		{
+			if (string.IsNullOrEmpty(pw)) return null;
+			Passwords.Add(pw);
 			return pw;
 		}
 

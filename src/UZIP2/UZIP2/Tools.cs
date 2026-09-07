@@ -528,8 +528,12 @@ namespace UZIP2
 		public static string UExtractPath(string file = null)
 		{
 			string path = null;
+			if (!string.IsNullOrEmpty(USetting.CliOverrideOutPath))
+			{
+				path = USetting.CliOverrideOutPath;
+			}
 			// 检查是否使用浏览路径面板
-			if (USetting.ExtractOutMode != (int)ExtractPath.Browse)
+			else if (USetting.ExtractOutMode != (int)ExtractPath.Browse)
 			{
 				switch (USetting.ExtractOutMode)
 				{
@@ -560,12 +564,16 @@ namespace UZIP2
 		public static string UCompressPath()
 		{
 			string path = null;
+			if (!string.IsNullOrEmpty(USetting.CliOverrideOutPath))
+			{
+				path = USetting.CliOverrideOutPath;
+			}
 			// 确定压缩输出目录
-			if (USetting.CompressOutMode == (int)CompressPath.File)
+			else if (USetting.CompressOutMode == (int)CompressPath.File)
 			{
 				path = Path.GetDirectoryName(USetting.FileList[0]);
 			}
-			if (USetting.CompressOutMode == (int)CompressPath.Browse)
+			else if (USetting.CompressOutMode == (int)CompressPath.Browse)
 			{
 				path = USetting.LastCompressPath;
 			}

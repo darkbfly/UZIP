@@ -28,20 +28,47 @@ namespace UZIP2
 	{
 		DebugWindow DBWin = null;
 		System.Windows.Forms.NotifyIcon trayIcon = null;
+		CliArgs cliArgs = null;
+		FolderWatch folderWatch = new FolderWatch();
+		bool watchJobRunning = false;
+		// CLI watch：会话态，不写共享 UZip.config
+		bool sessionWatchActive = false;
+		string sessionWatchPath = null;
+		string sessionWatchOutPath = null;
 
-		public MainWindow()
+		public MainWindow() : this(null)
 		{
+		}
+
+		public MainWindow(CliArgs cli)
+		{
+			cliArgs = cli ?? new CliArgs();
 			InitializeComponent();
 			WindowPosition();
 			ControlInitialize();
 			InitTrayIcon();
 			this.Closed += MainWindow_Closed;
+			this.Loaded += MainWindow_Loaded;
+		}
+
+		private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+		{
+			if (cliArgs != null && cliArgs.IsCliWatch)
+			{
+				StartCliWatch();
+				return;
+			}
+			ApplyFolderWatch();
+			if (cliArgs == null || !cliArgs.IsCliJob) return;
+			StartCliJob();
 		}
 
 		private void InitTrayIcon()
 		{
 			trayIcon = new System.Windows.Forms.NotifyIcon();
-			trayIcon.Text = "UZip";
+			int pid = Process.GetCurrentProcess().Id;
+			int others = CountOtherUzipProcesses();
+			trayIcon.Text = others > 0 ? ("UZip #" + (pid % 10000)) : "UZip";
 			trayIcon.Icon = LoadAppIcon();
 			trayIcon.Visible = false;
 			trayIcon.DoubleClick += (s, e) => RestoreFromTray();
@@ -55,6 +82,18 @@ namespace UZIP2
 			menu.Items.Add("显示", null, (s, e) => RestoreFromTray());
 			menu.Items.Add("退出", null, (s, e) => Dispatcher.BeginInvoke(new Action(ExitApp)));
 			trayIcon.ContextMenuStrip = menu;
+		}
+
+		private static int CountOtherUzipProcesses()
+		{
+			int me = Process.GetCurrentProcess().Id;
+			int n = 0;
+			foreach (Process p in Process.GetProcessesByName("UZIP2"))
+			{
+				if (p.Id != me) n++;
+				p.Dispose();
+			}
+			return n;
 		}
 
 		private static System.Drawing.Icon LoadAppIcon()
@@ -106,6 +145,7 @@ namespace UZIP2
 
 		private void MainWindow_Closed(object sender, EventArgs e)
 		{
+			folderWatch.Stop();
 			DisposeTrayIcon();
 		}
 
@@ -117,17 +157,21 @@ namespace UZIP2
 			double w = SystemParameters.PrimaryScreenWidth;
 			double wl = USetting.WindowLeft;
 			double wt = USetting.WindowTop;
+			// ponytail: 多开时错位，避免完全重叠
+			int offset = CountOtherUzipProcesses() * 30;
 
 			if (wl < 0 || wt < 0 || wl > w - 270 || wt > h - 270)
 			{
-				this.Left = w / 2 - 135;
-				this.Top = h / 2 - 135;
+				this.Left = w / 2 - 135 + offset;
+				this.Top = h / 2 - 135 + offset;
 			}
 			else
 			{
-				this.Left = wl;
-				this.Top = wt;
+				this.Left = wl + offset;
+				this.Top = wt + offset;
 			}
+			if (this.Left > w - 270) this.Left = Math.Max(0, w - 270);
+			if (this.Top > h - 270) this.Top = Math.Max(0, h - 270);
 			this.Topmost = USetting.WindowOnTop;
 		}
 
@@ -156,6 +200,9 @@ namespace UZIP2
 			BWindowOnTop.IsChecked = USetting.WindowOnTop;
 			BAutoStart.IsChecked = USetting.AutoStart;
 			USetting.ApplyAutoStart(USetting.AutoStart);
+			BWatchFolder.IsChecked = USetting.WatchFolderEnabled;
+			BWatchFolderPath.Text = USetting.WatchFolderPath;
+			BWatchFolderOutPath.Text = USetting.WatchFolderOutPath;
 			BDebugMode.Visibility = USetting.ShowDebug ? Visibility.Visible : Visibility.Hidden;
 			BDebugMode.IsChecked = USetting.DebugMode;
 			BExtractUnknow.IsChecked = USetting.ExtractUnknow;
@@ -1017,6 +1064,115 @@ namespace UZIP2
 			TipShow("开机自动启动UZip\n写入当前用户启动项");
 		}
 
+		private void BWatchFolder_Click(object sender, RoutedEventArgs e)
+		{
+			if (sessionWatchActive)
+			{
+				BWatchFolder.IsChecked = true;
+				return;
+			}
+			USetting.WatchFolderEnabled = (bool)BWatchFolder.IsChecked;
+			ApplyFolderWatch();
+		}
+		private void BWatchFolder_MouseEnter(object sender, MouseEventArgs e)
+		{
+			TipShow("监听文件夹内新压缩包并自动解压");
+		}
+		private void BWatchFolderPath_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+		{
+			if (sessionWatchActive) return;
+			SelectFolder(BWatchFolderPath);
+			USetting.WatchFolderPath = BWatchFolderPath.Text;
+			ApplyFolderWatch();
+		}
+		private void BWatchFolderPath_LostFocus(object sender, RoutedEventArgs e)
+		{
+			if (sessionWatchActive) return;
+			USetting.WatchFolderPath = BWatchFolderPath.Text;
+			ApplyFolderWatch();
+		}
+		private void BWatchFolderPath_MouseEnter(object sender, MouseEventArgs e)
+		{
+			TipShow("要监听的文件夹\n双击选择目录");
+		}
+		private void BWatchFolderOutPath_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+		{
+			if (sessionWatchActive) return;
+			SelectFolder(BWatchFolderOutPath);
+			USetting.WatchFolderOutPath = BWatchFolderOutPath.Text;
+		}
+		private void BWatchFolderOutPath_LostFocus(object sender, RoutedEventArgs e)
+		{
+			if (sessionWatchActive) return;
+			USetting.WatchFolderOutPath = BWatchFolderOutPath.Text;
+		}
+		private void BWatchFolderOutPath_MouseEnter(object sender, MouseEventArgs e)
+		{
+			TipShow("解压输出目录\n可空：解压到压缩包所在目录");
+		}
+
+		private void ApplyFolderWatch()
+		{
+			folderWatch.Stop();
+			string path;
+			if (sessionWatchActive)
+			{
+				path = sessionWatchPath;
+			}
+			else
+			{
+				if (!USetting.WatchFolderEnabled) return;
+				path = USetting.WatchFolderPath;
+			}
+			if (string.IsNullOrEmpty(path) || !Directory.Exists(path))
+			{
+				TipShow("监听目录无效，已关闭监听", TipMods.WarnRed);
+				if (!sessionWatchActive)
+				{
+					BWatchFolder.IsChecked = false;
+					USetting.WatchFolderEnabled = false;
+				}
+				return;
+			}
+			folderWatch.Start(path, OnWatchFileReady);
+			TipShow("正在监听：\n" + path, TipMods.TipNormal);
+		}
+
+		private void OnWatchFileReady(string path)
+		{
+			Dispatcher.BeginInvoke(new Action(TryProcessWatchQueue));
+		}
+
+		private void TryProcessWatchQueue()
+		{
+			if (watchJobRunning || USetting.RunState != RunStatus.Normal) return;
+			// 单次 CLI -q 任务进行中不抢监听队列；watch -q 仍要处理
+			if (cliArgs != null && cliArgs.IsCliJob && cliArgs.Quiet && !cliArgs.IsCliWatch) return;
+
+			string path = folderWatch.DequeueReady();
+			if (path == null) return;
+
+			// 监听仅解压：非压缩包忽略
+			if (!UTool.CanExtract(path)) { TryProcessWatchQueue(); return; }
+
+			watchJobRunning = true;
+			string outPath = sessionWatchActive ? sessionWatchOutPath : USetting.WatchFolderOutPath;
+			if (!string.IsNullOrEmpty(outPath) && Directory.Exists(outPath))
+				USetting.CliOverrideOutPath = UTool.CompletionPath(outPath);
+			else
+				USetting.CliOverrideOutPath = null;
+
+			USetting.FileList = new string[] { path };
+			TipShow("监听解压：\n" + System.IO.Path.GetFileName(path), TipMods.FixGray);
+			StartJobFromFileList((int)AppModes.OnlyExtract, allowBrowseDialog: false);
+		}
+
+		private void OnWatchJobFinished()
+		{
+			watchJobRunning = false;
+			TryProcessWatchQueue();
+		}
+
 		private void BDebugMode_Click(object sender, RoutedEventArgs e)
 		{
 			USetting.DebugMode = (bool)BDebugMode.IsChecked;
@@ -1799,65 +1955,179 @@ namespace UZIP2
 			else return;
 			// 确定文件列表可用性
 			if (USetting.FileList == null) return;
-			
-			// 仅解压
-			if (USetting.AppMode == (int)AppModes.OnlyExtract)
+
+			StartJobFromFileList(USetting.AppMode, allowBrowseDialog: true);
+		}
+
+		private void StartCliWatch()
+		{
+			string folder = cliArgs.Paths[0];
+			if (string.IsNullOrEmpty(folder) || !Directory.Exists(folder))
 			{
-				// 是否需要弹出路径选择窗口窗口
-				if (USetting.ExtractOutMode == (int)ExtractPath.Browse)
+				MessageBox.Show("监听目录不存在：\n" + folder, "UZip2", MessageBoxButton.OK, MessageBoxImage.Warning);
+				Close();
+				return;
+			}
+
+			if (!string.IsNullOrEmpty(cliArgs.Password))
+				USetting.PWPaper.AddPasswordSession(cliArgs.Password);
+
+			sessionWatchActive = true;
+			sessionWatchPath = folder;
+			sessionWatchOutPath = null;
+			if (!string.IsNullOrEmpty(cliArgs.OutPath))
+			{
+				try
 				{
-					// 弹出解压路径选择窗口,窗口取消，则中断
+					if (!Directory.Exists(cliArgs.OutPath))
+						Directory.CreateDirectory(cliArgs.OutPath);
+					sessionWatchOutPath = cliArgs.OutPath;
+				}
+				catch
+				{
+					MessageBox.Show("输出目录无效：\n" + cliArgs.OutPath, "UZip2", MessageBoxButton.OK, MessageBoxImage.Warning);
+					Close();
+					return;
+				}
+			}
+
+			// 仅刷新 UI 展示，不写共享配置
+			BWatchFolder.IsChecked = true;
+			BWatchFolderPath.Text = sessionWatchPath;
+			BWatchFolderOutPath.Text = sessionWatchOutPath ?? "";
+
+			if (cliArgs.Quiet)
+			{
+				this.Hide();
+				if (trayIcon != null)
+				{
+					trayIcon.Text = "UZip 监听 " + System.IO.Path.GetFileName(folder.TrimEnd('\\', '/'));
+					trayIcon.Visible = true;
+				}
+			}
+
+			ApplyFolderWatch();
+		}
+
+		private void StartCliJob()
+		{
+			if (cliArgs.Quiet)
+				this.Hide();
+
+			if (!string.IsNullOrEmpty(cliArgs.Password))
+				USetting.PWPaper.AddPasswordSession(cliArgs.Password);
+
+			if (!string.IsNullOrEmpty(cliArgs.OutPath))
+			{
+				try
+				{
+					string p = cliArgs.OutPath;
+					if (!Directory.Exists(p) && !File.Exists(p))
+					{
+						// 无扩展名当作目录；有扩展名且父目录存在则当压缩输出目录的父路径
+						string parent = System.IO.Path.GetDirectoryName(p);
+						if (!string.IsNullOrEmpty(System.IO.Path.GetExtension(p)) && !string.IsNullOrEmpty(parent))
+							Directory.CreateDirectory(parent);
+						else
+							Directory.CreateDirectory(p);
+					}
+					if (Directory.Exists(p))
+						USetting.CliOverrideOutPath = UTool.CompletionPath(p);
+					else
+						USetting.CliOverrideOutPath = UTool.CompletionPath(System.IO.Path.GetDirectoryName(p) ?? p);
+				}
+				catch
+				{
+					TipShow("输出路径无效", TipMods.WarnRed);
+					FinishCliQuiet(1);
+					return;
+				}
+			}
+
+			USetting.FileList = cliArgs.Paths.ToArray();
+			int mode;
+			switch (cliArgs.Mode)
+			{
+				case CliArgs.CliMode.Extract: mode = (int)AppModes.OnlyExtract; break;
+				case CliArgs.CliMode.Compress: mode = (int)AppModes.OnlyCompress; break;
+				default: mode = (int)AppModes.Auto; break;
+			}
+			StartJobFromFileList(mode, allowBrowseDialog: false);
+		}
+
+		/// <summary>
+		/// 按模式分派压缩/解压。allowBrowseDialog=false 时（CLI）不弹路径窗，Browse 回退到文件所在目录。
+		/// </summary>
+		private void StartJobFromFileList(int appMode, bool allowBrowseDialog)
+		{
+			if (USetting.FileList == null || USetting.FileList.Length == 0) return;
+
+			if (!allowBrowseDialog && string.IsNullOrEmpty(USetting.CliOverrideOutPath))
+			{
+				string dir = System.IO.Path.GetDirectoryName(USetting.FileList[0]);
+				if (!string.IsNullOrEmpty(dir))
+					USetting.CliOverrideOutPath = UTool.CompletionPath(dir);
+			}
+
+			if (appMode == (int)AppModes.OnlyExtract)
+			{
+				if (allowBrowseDialog && USetting.ExtractOutMode == (int)ExtractPath.Browse
+					&& string.IsNullOrEmpty(USetting.CliOverrideOutPath))
+				{
 					if (!ShowExtractSelectWindow()) return;
 				}
-				// 更改工作状态
+				USetting.RunState = RunStatus.ExtractFile;
+				MainProcess(true);
+				return;
+			}
+			if (appMode == (int)AppModes.OnlyCompress)
+			{
+				if (allowBrowseDialog && USetting.CompressOutMode == (int)CompressPath.Browse
+					&& string.IsNullOrEmpty(USetting.CliOverrideOutPath))
+				{
+					if (!ShowCompressSelectWindow()) return;
+				}
+				USetting.RunState = RunStatus.CompressFile;
+				MainProcess(false);
+				return;
+			}
+
+			// Auto
+			bool ce = UTool.CanExtract(USetting.FileList[0]);
+			VolumesFile vf = new VolumesFile(USetting.FileList[0]);
+			if (ce || vf.IsVolumes())
+			{
+				if (allowBrowseDialog && USetting.ExtractOutMode == (int)ExtractPath.Browse
+					&& string.IsNullOrEmpty(USetting.CliOverrideOutPath))
+				{
+					if (!ShowExtractSelectWindow()) return;
+				}
 				USetting.RunState = RunStatus.ExtractFile;
 				MainProcess(true);
 			}
-			// 仅压缩
-			if (USetting.AppMode == (int)AppModes.OnlyCompress)
+			else
 			{
-				// 是否需要弹出路径选择窗口窗口
-				if (USetting.CompressOutMode == (int)CompressPath.Browse)
+				if (allowBrowseDialog && USetting.CompressOutMode == (int)CompressPath.Browse
+					&& string.IsNullOrEmpty(USetting.CliOverrideOutPath))
 				{
-					// 弹出压缩路径选择窗口
 					if (!ShowCompressSelectWindow()) return;
 				}
-				// 更改工作状态
 				USetting.RunState = RunStatus.CompressFile;
 				MainProcess(false);
 			}
+		}
 
-			// 自动模式，文件可解压是解压模式，不可则都是压缩模式
-			// 具体工作方式由最后选中并拖拽的文件决定
-			if (USetting.AppMode == (int)AppModes.Auto)
+		private void FinishCliQuiet(int exitCode)
+		{
+			USetting.CliOverrideOutPath = null;
+			if (cliArgs == null || !cliArgs.Quiet) return;
+			if (cliArgs.IsCliWatch) return; // 监听模式常驻
+			if (!cliArgs.IsCliJob) return;
+			Dispatcher.BeginInvoke(new Action(() =>
 			{
-				bool ce = UTool.CanExtract(USetting.FileList[0]);
-				VolumesFile vf = new VolumesFile(USetting.FileList[0]);
-				// 检查最后选择的文件是否能解压,或者是否为分卷
-				if ( ce || vf.IsVolumes())
-				{
-					// 检查是否为手动选择解压位置
-					if (USetting.ExtractOutMode == (int)ExtractPath.Browse)
-					{
-						// 弹出解压路径选择窗口，若取消窗口则直接中断工作
-						if (!ShowExtractSelectWindow()) return;
-					}
-
-					USetting.RunState = RunStatus.ExtractFile;
-					MainProcess(true);
-				}
-				else
-				{
-					if (USetting.CompressOutMode == (int)CompressPath.Browse)
-					{
-						// 弹出压缩路径选择窗口，若取消窗口则直接中断工作
-						if (!ShowCompressSelectWindow()) return;
-					}
-
-					USetting.RunState = RunStatus.CompressFile;
-					MainProcess(false);
-				}
-			}
+				DisposeTrayIcon();
+				Environment.Exit(exitCode);
+			}));
 		}
 
 		// 解压选择窗口 弹出
@@ -2324,14 +2594,13 @@ namespace UZIP2
 				this.Dispatcher.Invoke(new UMessagePaper(UMessagePaperNum));
 				*/
 
-				// 恢复软件状态，恢复提示状态
-				USetting.RunState = RunStatus.Normal;
+				// 提示态可先复位；RunState 与 watch 收尾必须同在 UI 线程，避免抢队列
 				TipWarnToNormal();
 				// 整理成功失败数据
 				int fl = FailureList.Count;
 				int sl = SuccessList.Count;
 				// 使用结果窗 则只在结果窗显示结果
-				if (USetting.ResultWindow)
+				if (USetting.ResultWindow && !(cliArgs != null && cliArgs.Quiet))
 				{
 					this.Dispatcher.Invoke(new UMessage(UMessageTip), "拖拽一个压缩档案到这里",TipMods.TipNormal);
 					this.Dispatcher.Invoke(new UMessageResult(UMessageResultWindow), SuccessList, FailureList,true);
@@ -2350,6 +2619,14 @@ namespace UZIP2
 				USetting.FileList = null;
 				// 复位中断数据
 				USetting.UCancel = false;
+				USetting.CliOverrideOutPath = null;
+				int exitCode = FailureList.Count != 0 ? 1 : 0;
+				this.Dispatcher.Invoke(new Action(() =>
+				{
+					USetting.RunState = RunStatus.Normal;
+					FinishCliQuiet(exitCode);
+					OnWatchJobFinished();
+				}));
 			});
 			return;
 		}
@@ -2492,12 +2769,10 @@ namespace UZIP2
 					}
 					RToTxt.Close();
 				}
-				// 恢复软件状态，恢复提示状态
-				USetting.RunState = RunStatus.Normal;
 				TipWarnToNormal();
 				// 如使用结果窗 则只在结果窗显示结果
 				// 否则使用提示面板显示结果
-				if (USetting.ResultWindow)
+				if (USetting.ResultWindow && !(cliArgs != null && cliArgs.Quiet))
 				{
 					this.Dispatcher.Invoke(new UMessage(UMessageTip), "拖拽一个压缩档案到这里", TipMods.TipNormal);
 					this.Dispatcher.Invoke(new UMessageResult(UMessageResultWindow), SuccessList, FailureList, false);
@@ -2520,6 +2795,14 @@ namespace UZIP2
 				USetting.FileList = null;
 				// 复位中断数据
 				USetting.UCancel = false;
+				USetting.CliOverrideOutPath = null;
+				int exitCode = FailureList.Count != 0 ? 1 : 0;
+				this.Dispatcher.Invoke(new Action(() =>
+				{
+					USetting.RunState = RunStatus.Normal;
+					FinishCliQuiet(exitCode);
+					OnWatchJobFinished();
+				}));
 			});
 		}
 
